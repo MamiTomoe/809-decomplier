@@ -5,6 +5,7 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include <boost/algorithm/string.hpp>
 
 //TODO: Change the name
 using namespace std::experimental::filesystem::v1;
@@ -17,10 +18,10 @@ using std::vector;
 class ReadFile {
 public:
 	/*The function is the c'tor of the class
-	 * Input: path 
+	 * Input: path
 	 * output: the new class.
 	 */
-	ReadFile(path path) :_path(path) {};
+	ReadFile(path path) :_path{path} {};
 	
 	/*
 	* The function is the d'tor of the class
@@ -35,7 +36,12 @@ public:
 
 	inline  path  getPath() { return _path; }
 	
+	inline void setPath(path  _path) { this->_path = _path; }
+
 	vector<string> read();
+
+	void getRegisterFromFile(string& reg);
+
 private:
 	path _path;
 };

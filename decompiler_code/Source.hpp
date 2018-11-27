@@ -1,7 +1,10 @@
 #pragma once
+#pragma warning(disable:4996)
 #include <map>
 #include <algorithm>
 #include <string>
+
+
 
 #define X64_AND_X86_REGISTERS_LEGTH 3
 #define X8086_REGISTERS_LEGTH 2
@@ -17,7 +20,7 @@ using std::string;
 class FindArchitcture {
 public:
 	FindArchitcture(string fullRegister) { getArictutreForMap(); }
-	
+
 	inline string getFileArch();
 
 	~FindArchitcture() = default;

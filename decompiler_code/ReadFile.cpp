@@ -19,3 +19,7 @@ vector<string> ReadFile::read()
 	while (fileToRead >> line) { lines.push_back(line); }
 	return lines;
 }
+
+/*
+
+*/
