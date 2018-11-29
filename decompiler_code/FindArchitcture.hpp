@@ -16,9 +16,18 @@ using std::string;
 
 class FindArchitcture {
 public:
-	FindArchitcture(string fullRegister) { getArictutreForMap(); }
-	
-	inline string getFileArch();
+	FindArchitcture(string fullRegister) { 
+		getArictutreForMap(); 
+		getRegFromString(fullRegister);
+	}
+
+	/*
+	The function will find  arch by getting  the letter from the given register\
+	input: register char
+	output: the given arch
+	*/
+
+	inline string getFileArch() { return _architctures.find(_reg) != _architctures.end() ? _architctures[_reg] : "Arch Execption"; }
 
 	~FindArchitcture() = default;
 

@@ -20,13 +20,6 @@ void FindArchitcture::getArictutreForMap()
 	_architctures['D'] = "x80008";
 }
 
-/*
-The function will find  arch by getting  the letter from the given register\
-input: register char
-output: the given arch
-*/
-
-inline string FindArchitcture::getFileArch() { return _architctures.find(_reg) != _architctures.end() ? _architctures[_reg] : "Arch Execption";}
 
 /*
 The function is getting a string from the file (The register) 

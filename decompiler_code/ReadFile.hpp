@@ -14,6 +14,8 @@ using std::cin;
 using std::string;
 using std::ifstream;
 using std::vector;
+using boost::find;
+using boost::is_any_of;
 
 class ReadFile {
 public:

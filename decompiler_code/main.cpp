@@ -11,15 +11,13 @@ int main(void)
 	
 	vector<string> lines(r->read());
 	
-	for (const auto& line : lines) {
-		cout << line.c_str() << '\n';
-	}
+	for (const auto& line : lines) {cout << line.c_str() << '\n';}
 	
-	/**
-	FindArchitcture* fa( new FindArchitcture());
-	string arch = fa->get_file_arch('A');
+	
+	FindArchitcture* fa( new FindArchitcture(lines[2]));
+	string arch = fa->getFileArch();
 	cout << arch << endl;
-	**/
+	
 
 	getchar();
 	return 0;
