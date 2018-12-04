@@ -6,6 +6,7 @@
 #include <boost/algorithm/string.hpp>
 #include <experimental/filesystem>
 #include <iostream>
+#include "ReadFile.hpp"
 
 using std::vector;
 using std::string;
