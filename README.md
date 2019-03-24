@@ -22,6 +22,11 @@ My decompiler is a native one and It has a few features:
 
 How to use?
 Give it an assembly/text file and see the output.
+For commpltion use VS. put the files into the the project and compile
+(I will give the  exe too and other stuff needed)
+
+Requied:
+ Boost  and  c++17 
 
 Enjoy , Yuval Elbar :).
 
