@@ -7,6 +7,7 @@ Decompiler is a translator from compiled lanuage to it ancient  version( before
 complition).
 There are two typs: one is a high level decompiler(from it's bytecode to the
 lanague it was wriiten to) and the second native(from assembly to puesdo c).
+My tool is used when you want to translate assembly from pusdo c
 
 My decompiler is a native one and It has a few features:
 *  Regonzining  from 8 until 64 architctures.
