@@ -9,7 +9,6 @@ output: none
 
 void Logic::parseAssemblyInfo()
 {
-	//bool stop = false;
 	for (int   i = 0; i < _assemblyFromFile.size(); ++i)
 	{
 		//Finding the function that we are working with
@@ -110,14 +109,15 @@ void Logic::parseAssemblyInfo()
 			}
 			
 		}
+		/*
 		else if (END_FROM_FILE == _assemblyFromFile[i]) { 
 			pushIntoTranslationVector(_assemblyFromFile[i], i);
 
 			_insturctions.push_back(parserPair(i,_assemblyFromFile[i])); 
 		}
+		*/
 		
 		else{
-			//stop = true;
 			throw OpcodeNumOfVarsException("The number of vars is illegal for the special opcodes");
 		}
 	}

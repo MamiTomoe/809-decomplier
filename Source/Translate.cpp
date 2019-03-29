@@ -29,6 +29,7 @@ Translate::Translate(std::vector<parserPair> stackAndHeapVars, std::vector<parse
 	
 	translateFunction(); 
 	translateSymobls();
+	translateMain();
 }
 
 
@@ -128,7 +129,7 @@ void Translate::translateFunction()
 			}
 			
 			std::cout << function.second.first << " " << function.first << "(" << varsName << ")";
-			setFunctionVars(function.second.second.size() - 1 );//The functtions num of vars
+			setFunctionVars(function.second.second.size() );//The functtions num of vars
 		}
 		else { std::cout << function.second.first << " " << function.first << "()"; }
 
@@ -157,6 +158,7 @@ int  Translate::parseTheNumOfVarsOfTheFunction(const int& currFunctionNameSpeica
 
 			auto pushInsturction = _insturctions[i];
 
+			
 			auto  find(std::find_if(_pushAndPopAndCallWithVars.begin(),_pushAndPopAndCallWithVars.end(),
 				[&pushInsturction](const pushAndPopAndCallParse& pushPair) {return  pushPair.first == pushInsturction.first; }));
 			
@@ -164,7 +166,7 @@ int  Translate::parseTheNumOfVarsOfTheFunction(const int& currFunctionNameSpeica
 			if (find != _pushAndPopAndCallWithVars.end()) {//Finding the push instcruction  is acuaclly exist (For debugging and problem case)
 
 				//Finding if  it is not the the pointer that the stack uses. ("rbp") , Leave the for
-				if (auto found = find->second.second.find(POINTER_THAT_THE_STACK_USE); found != std::string::npos) { break; }
+				if (isPartOfStackFrame(std::make_pair(find->first,find->second.second))) { break; }
 
 				else { count++; }
 			}
@@ -212,9 +214,7 @@ void Translate::parsePushAndPopAndCallWithVars()
 {
 	for (auto&& instruction : _insturctions) {
 
-		auto  findInsturction(findInVector(_stackAndHeapVars, instruction));
-
-		if (findInsturction != _stackAndHeapVars.end()) {
+		if (auto  findInsturction(findInVector(_stackAndHeapVars, instruction)); findInsturction != _stackAndHeapVars.end()) {
 			//TODO: a typedef to the pair of strings
 			_pushAndPopAndCallWithVars.push_back(pushAndPopAndCallParse(instruction.first,std::make_pair(instruction.second, findInsturction->second)));
 		}
@@ -236,34 +236,24 @@ void Translate::parseStackFrame()
 		{
 			if (auto find(findInStackAndHeapVars->second.find(POINTER_THAT_THE_STACK_USE)); find != std::string::npos) {
 
-					_stackFrame.push_back(std::make_pair(instruction.first, instruction.second));
+					_stackFrame.emplace_back(instruction.first, instruction.second);
 			}
 			
 		}
 		else {
 
 
-			if (auto findInSrcVars = findInVector(_srcVars, instruction); findInSrcVars != _srcVars.end()) {
-				auto findIfThisIsNotAVar(findInSrcVars->second.find(IN_STACK_VAR));
-
-				if (auto find = findInSrcVars->second.find(POINTER_THAT_THE_STACK_USE); find != std::string::npos && findIfThisIsNotAVar == std::string::npos) 
+			if (auto findInSrcVars = findInVector(_srcVars, instruction),  findInDstVars(findInVector(_dstVars, instruction)); findInSrcVars != _srcVars.end())
+			{
+				
+				if (!isFunctionVar(findInDstVars->second) && !isFunctionVar(findInSrcVars->second))
 				{
-					_stackFrame.push_back(std::make_pair(instruction.first, instruction.second));
-				}
 
-				if (auto find = findInSrcVars->second.find(STACK_POINTER_REGISTER); find != std::string::npos) {
-					_stackFrame.emplace_back(instruction.first, instruction.second);
-				}
-
-				else {
-					auto findInDstVars(findInVector(_dstVars, instruction));
-
-					if (auto find = findInDstVars->second.find(POINTER_THAT_THE_STACK_USE); find != std::string::npos && !isFunctionVar(findInDstVars->second)) {
-						_stackFrame.push_back(std::make_pair(instruction.first, instruction.second));
+					if (auto e = std::regex("(r|e)(sp|bp)"); std::regex_match(findInSrcVars->second, e)  || std::regex_match(findInDstVars->second , e) && isConnectedToOpcodeVars(instruction.second)) {
+						_stackFrame.emplace_back(instruction.first, instruction.second);
 					}
-
-	
 				}
+				
 			}
 		}
 		
@@ -283,7 +273,6 @@ std::vector<parserPair>::iterator Translate::findInVector(std::vector<parserPair
 	auto findInVector(std::find_if(givenVector.begin(), givenVector.end(), [givenPair](const parserPair& foundPair)
 	{return givenPair.first == foundPair.first; }));
 	
-	//if (findInVector != givenVector.end()) {return findInVector;}
 	return findInVector !=  givenVector.end() ?  findInVector : givenVector.end();
 }
 
@@ -297,6 +286,8 @@ void Translate::translateInsideOfFunction(const std::string& functionName)
 {
 
 	//	findIndexOfTheCurrFunctionCall()
+	//	auto indexOfFunction = std::distance(_forFuckingTranslate.begin() , findInVector(_forFuckingTranslate, ))
+	
 	for (int i = 0; i < _forFuckingTranslate.size(); ++i)
 	{
 		if (auto find = _forFuckingTranslate[i].second.find(functionName + ":"); find != std::string::npos) 
@@ -335,67 +326,71 @@ void Translate::translateInsideOfFunction(const std::string& functionName)
 }
 
 /*
-The function is parsing the varibles from the vector.(That got from the heap and stack vars
+The function is parsing the varibles from the vector.(That got from the heap and stack vars)
 input: none
 output: none
 */
 
 void Translate::parseVaraibles() {
 	
-	int numOfVar = 0;
+	int numOfVar = 1;//Starting from first var
 
-	for (auto& insturction : _insturctions) 
+	for (auto& insturction : _insturctions)
 	{
+		if (!isPartOfStackFrame(insturction))
+		{
+			if (PUSH_OPCODE == insturction.second) {
 
-		if (PUSH_OPCODE == insturction.second) {
 
+				if (auto findSpecificNum(findInVector(_stackAndHeapVars, insturction)); findSpecificNum != _stackAndHeapVars.end())
+				{
+					if (isIntVar(findSpecificNum->second)) {
+						//TODO: until the types class to find the right type it is an defualt type.
+						pushToVarsVector(findSpecificNum->first, "a" + std::to_string(numOfVar), findSpecificNum->second, DEFUALT_TYPE);
 
-			if (auto findSpecificNum(findInVector(_stackAndHeapVars, insturction)); findSpecificNum != _stackAndHeapVars.end())
-			{
-				if (isIntVar(findSpecificNum->second)){
-					//TODO: until the types class to find the right type it is an defualt type.
-					pushToVarsVector(findSpecificNum->first, "a" + std::to_string(numOfVar), findSpecificNum->second, DEFUALT_TYPE);
-					
+					}
+
+					else if (auto typeResult(typesMapResult(insturction.second)); typeResult != _types.end()) {
+						pushToVarsVector(findSpecificNum->first, "a" + std::to_string(numOfVar), findSpecificNum->second, typeResult->second);
+					}
+
+					else {
+						pushToVarsVector(findSpecificNum->first, "a" + std::to_string(numOfVar), findSpecificNum->second, DEFUALT_TYPE);
+					}
+
+					numOfVar++;//Next the num of vars.
 				}
-
-				else if (auto typeResult(typesMapResult(insturction.second)); typeResult != _types.end()) {
-					pushToVarsVector(findSpecificNum->first, "a" + std::to_string(numOfVar), findSpecificNum->second, typeResult->second);
-				}
-
-				else {
-					pushToVarsVector(findSpecificNum->first, "a" + std::to_string(numOfVar), findSpecificNum->second, DEFUALT_TYPE);
-				}
-
-				numOfVar++;//Next the num of vars.
 			}
-		}
-		
-		else if (MAKES_LOCAL_VARS_OPCODE == insturction.second) {
+
 			
+			}
+		else if (MAKES_LOCAL_VARS_OPCODE == insturction.second) {
+
 
 			if (isPartOfStackFrame(insturction)) {
-				
-				if (auto findTheNumOfTheLocalVars(findInVector(_dstVars, insturction));  findTheNumOfTheLocalVars != _dstVars.end()) {
 
-					makeLocalVars(findTheNumOfTheLocalVars->first, numOfVar);
+				if (auto findTheNumOfTheLocalVars(findInVector(_dstVars, insturction));  findTheNumOfTheLocalVars != _dstVars.end()) {
+					auto numOfLocals(findInVector(_srcVars, insturction));
+					int num = std::stoi(numOfLocals->second);//Not recommend , THis is exploited way, the better way in boost
+					makeLocalVars(findTheNumOfTheLocalVars->first,  num);
 				}
 			}
 
 			if (auto isFloatOrDoubleVar(findInVector(_floatAndDoubleVars, insturction)); isFloatOrDoubleVar != _floatAndDoubleVars.end()) {
 				pushToVarsVector(isFloatOrDoubleVar->first, "a" + std::to_string(numOfVar), isFloatOrDoubleVar->second, "float");
 			}
-		}
-		//TODO: parse pointer vars.
+			//TODO: parse pointer vars.
 
-		std::string gotType = checkIfHasAlreadyType(insturction);
-		if (!gotType.empty()) {
-			pushToVarsVector(insturction.first, "a" + std::to_string(numOfVar), "0" ,gotType);//The null byte for all the type + gotten type
+			std::string gotType = checkIfHasAlreadyType(insturction);
+			if (!gotType.empty()) {
+				pushToVarsVector(insturction.first, "a" + std::to_string(numOfVar), "0", gotType);//The null byte for all the type + gotten type
+			}
+
+
+			//else if(auto isGotTypeAlready(_types.f))
 		}
 
-		
-		//else if(auto isGotTypeAlready(_types.f))
 	}
-
 	parsePushAndPopAndCallWithVars();
 }
 
@@ -500,13 +495,13 @@ void  Translate::translateCondition(const parserPair& p , const int& index)
 	if (auto theCondition(_foundSymbols.find(_insturctions[index].second)); theCondition != _foundSymbols.end() && whichCondition != _foundSymbols.end()) 
 	{
 		
-		std::cout << theCondition->second.first  << srcVar->second << " " << whichCondition->second.first << "  " << destVar->second << ")";
+		std::cout <<"\t" << theCondition->second.first  << srcVar->second << " " << whichCondition->second.first << "  " << destVar->second << ")";
 	
 		if (auto  getLabel(findInVector(_oneOpcodeVars, _insturctions[index + 1])); getLabel != _oneOpcodeVars.end()) {
 			
-			std::cout << "\n{\n";
+			std::cout << "\n\t{\n";
 			translateLabel(*getLabel);
-			std::cout << "}\n";
+			std::cout << "\n\t}\n";
 		}
 	}
 
@@ -669,12 +664,12 @@ The function is  translating else.
 
 void Translate::translateElse( const int& currIndex) 
 {
-	std::cout << "else\n{\n";
+	std::cout << "\telse\n\t{\n";
 
 	if (auto  getLabel(findInVector(_oneOpcodeVars, _insturctions[currIndex])); getLabel != _oneOpcodeVars.end()){
 		
 		translateLabel(*getLabel);
-		std::cout << "\n}\n";
+		std::cout << "\n\t}\n";
 	}
 
 }
@@ -708,12 +703,12 @@ The function is translting the while loop
 void Translate::translateWhile(const  int& currIndex)
 {
 	auto getLoop(_foundSymbols.find(_insturctions[currIndex].second));
-	std::cout << getLoop->second.first << "\n{\n";
+	std::cout << "\t"<<  getLoop->second.first << "\n\t{\n";
 	
 	if (auto getLabel(findInVector(_oneOpcodeVars, _insturctions[currIndex])); getLabel != _oneOpcodeVars.end()){
 		auto index = std::distance(_forFuckingTranslate.begin(), findInVector(_forFuckingTranslate, _insturctions[currIndex]));//Find the real index of the while in the transaltion vector.
 		translateInisdeOfWhile(index - 1, getLabel->second + ":");//For not starting from loop and adding the : for the label itself
-		std::cout << "\n}\n";
+		std::cout << "\n\t}\n";
 	}
 	
 }
@@ -760,9 +755,9 @@ The function is setting the function vars (to make them more beautufl.
 
 void Translate::setFunctionVars(const int& numOfFunctionVars)
 {
-	for (int i = 0, j = PLUS_VAR_NUM; i < numOfFunctionVars; i++, j += PLUS_VAR_NUM)
+	for (int i = numOfFunctionVars, j = PLUS_VAR_NUM; i > 0; i--, j += PLUS_VAR_NUM)
 	{
-		_functionVars["[rbp-" + std::to_string(j) + "]"] = "a" + std::to_string(i + 1);//To make the it into the function var
+		_functionVars["[rbp-" + std::to_string(j) + "]"] = "a" + std::to_string(i);//To make the it into the function var
 	}
 }
 
@@ -779,3 +774,14 @@ std::vector<parserPair>::iterator Translate::findIfLoop(const parserPair& curren
 	return 
 }
 */
+
+/*
+The function is  translating call.
+@input: the current index
+@output: none
+*/
+
+void Translate::translateCall(const int& index)
+{
+
+}

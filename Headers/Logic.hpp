@@ -44,7 +44,7 @@ typedef std::pair<int, std::string>  parserPair;
 #define FUNCTION_DECLARETION "proc"
 #define IS_OPCODE_HAS_ONE_VAR 1
 #define JMP_OPCODE "jmp"
-
+#define MAIN_FUNCTION "main:"
 
 enum   placeIndex {
 	dstVarIndex = 1,

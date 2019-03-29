@@ -7,6 +7,8 @@
 #include <iostream>
 #include <range.hpp>
 #include <array>
+#include <regex>
+
 
 #include "StackFrameException.hpp"
 
@@ -15,6 +17,7 @@
 #define CALL_OPCODE "call"
 #define RETURN_OPCODE "ret"
 #define MAKES_LOCAL_VARS_OPCODE "sub"
+#define CLEAN_STACK_FRAME "add"
 #define POINTER_THAT_THE_STACK_USE "bp"
 #define STACK_POINTER_REGISTER "sp"
 #define DEFUALT_TYPE "int"
@@ -294,4 +297,12 @@ private:
 	inline std::map<std::string, std::string>::iterator typesMapResult(const std::string& givenString) {
 		return _types.find(givenString.substr(TYPE_INDEX, givenString.find(' ')));
 	}
+
+	//The function is checking if it connected to one of the instructions of stack frames vars (add or sub)
+	//@input: the opcode - const std::string&
+	//@output: connected or not - bool
+
+	inline bool isConnectedToOpcodeVars(const std::string& opcode) { return opcode == MAKES_LOCAL_VARS_OPCODE || opcode == CLEAN_STACK_FRAME; }
+
+	void translateCall(const int&);
 };
