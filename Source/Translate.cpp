@@ -41,7 +41,7 @@ output: none
 
 
 
-void Translate::translateSymobls() 
+void Translate::translateSymobls()
 {
 	size_t i = 0;
 	
@@ -250,6 +250,7 @@ void Translate::parseStackFrame()
 				{
 
 					if (auto e = std::regex("(r|e)(sp|bp)"); std::regex_match(findInSrcVars->second, e)  || std::regex_match(findInDstVars->second , e) && isConnectedToOpcodeVars(instruction.second)) {
+						
 						_stackFrame.emplace_back(instruction.first, instruction.second);
 					}
 				}
@@ -310,10 +311,20 @@ void Translate::translateInsideOfFunction(const std::string& functionName)
 						auto index = std::distance(_insturctions.begin(), findInVector(_insturctions, _forFuckingTranslate[i]));
 							translateElse(index);
 					}
+					else if(_forFuckingTranslate[i].second == CALL_OPCODE){ 
+						translateCall(i + 1);
+					}
 				}
 				else if (MAKES_LOCAL_VARS_OPCODE == _forFuckingTranslate[i].second)
 				{
-					//auto indexOfLocalVars(findInVector(_))
+					if (auto localVars = findInVarsVector(_forFuckingTranslate[i]); localVars != _varsVector.end()) 
+					{
+						auto firstIndex = std::distance(_varsVector.begin(), localVars);
+						int sizeOfLocals = std::stoi(_forFuckingTranslate[i + LOCAL_VAR_INDEX_IN_TRANSLATION_VECTOR].second);
+						printLocalVars(sizeOfLocals, firstIndex);
+						prettyfiyLocalVars(sizeOfLocals, firstIndex  + sizeOfLocals  - 1);
+					}
+					
 				}
 				++i;
 			}
@@ -345,9 +356,11 @@ void Translate::parseVaraibles() {
 				if (auto findSpecificNum(findInVector(_stackAndHeapVars, insturction)); findSpecificNum != _stackAndHeapVars.end())
 				{
 					if (isIntVar(findSpecificNum->second)) {
-						//TODO: until the types class to find the right type it is an defualt type.
 						pushToVarsVector(findSpecificNum->first, "a" + std::to_string(numOfVar), findSpecificNum->second, DEFUALT_TYPE);
 
+					}
+					else if (isCharVar(findSpecificNum->second)) {
+						pushToVarsVector(findSpecificNum->first, "a" + std::to_string(numOfVar), findSpecificNum->second, CHAR_TYPE);
 					}
 
 					else if (auto typeResult(typesMapResult(insturction.second)); typeResult != _types.end()) {
@@ -371,23 +384,20 @@ void Translate::parseVaraibles() {
 
 				if (auto findTheNumOfTheLocalVars(findInVector(_dstVars, insturction));  findTheNumOfTheLocalVars != _dstVars.end()) {
 					auto numOfLocals(findInVector(_srcVars, insturction));
-					int num = std::stoi(numOfLocals->second);//Not recommend , THis is exploited way, the better way in boost
-					makeLocalVars(findTheNumOfTheLocalVars->first,  num);
+					int realNumofVars = std::stoi(numOfLocals->second);//Not recommend , This is exploited way, the better way in boost
+					makeLocalVars(findTheNumOfTheLocalVars->first, realNumofVars);
 				}
 			}
 
 			if (auto isFloatOrDoubleVar(findInVector(_floatAndDoubleVars, insturction)); isFloatOrDoubleVar != _floatAndDoubleVars.end()) {
 				pushToVarsVector(isFloatOrDoubleVar->first, "a" + std::to_string(numOfVar), isFloatOrDoubleVar->second, "float");
 			}
-			//TODO: parse pointer vars.
 
 			std::string gotType = checkIfHasAlreadyType(insturction);
 			if (!gotType.empty()) {
 				pushToVarsVector(insturction.first, "a" + std::to_string(numOfVar), "0", gotType);//The null byte for all the type + gotten type
 			}
 
-
-			//else if(auto isGotTypeAlready(_types.f))
 		}
 
 	}
@@ -433,14 +443,22 @@ The function is translating the the opcode into (the dest and source symbols) in
 */
 
 void Translate::translateDstAndSrcSymbols(const parserPair& dst, const parserPair& src, const std::string& opcode) {
-	std::string translated;
+	std::string translated, source;
+	if (auto typeResult = typesMapResult(dst.second); typeResult != _types.end() && dst.second.find(CONVERTING_OPCODE) != std::string::npos) {
+		source = convertOpcode(src, typeResult->second);
+		if (isFunctionVar(dst.second)) {
+			//To improve: change its type and add it to the vars vector
+		}
+	}
+	if (source.empty()) { source = src.second; }
 	if (OPCODE_THAT_DONT_APPEND_EQUAL != opcode) {
-		translated = '\t'+ dst.second  + gettingTheTranslatedOpcode(opcode) + "=" + src.second;
+
+			translated = '\t' + dst.second + gettingTheTranslatedOpcode(opcode) + " = " + source;
 		std::cout << translated << ";\n";
 	}
 	else
 	{
-		translated = '\t' + dst.second +  gettingTheTranslatedOpcode(opcode) + src.second;
+		translated = '\t' + dst.second +  " " + gettingTheTranslatedOpcode(opcode) + " "  + source;
 		std::cout << translated << ";\n";
 	}
 }
@@ -468,16 +486,13 @@ std::string Translate::checkIfHasAlreadyType(const parserPair& pair)
 
 /*
 The function is making the locals vars of function
-@input: the num of locals var and currNumOfVar - int
+@input: the curr index and the amount of local vars - constint
 @output: none
 */
 
-void Translate::makeLocalVars(const int& numOfLocalsVars , int& currNumOfVar)
+void Translate::makeLocalVars(const int& currIndex , int& amountOfLocalVar)
 {
-	for (int i = 0; i < numOfLocalsVars; ++i){
-		pushToVarsVector(numOfLocalsVars, "b" + std::to_string(currNumOfVar),"0", DEFUALT_TYPE);
-		currNumOfVar++;
-	}
+	for (int i = 0; i < amountOfLocalVar; ++i){pushToVarsVector(currIndex, "b" + std::to_string(i + 1),"0", DEFUALT_TYPE);}
 }
 
 /*
@@ -708,7 +723,7 @@ void Translate::translateWhile(const  int& currIndex)
 	if (auto getLabel(findInVector(_oneOpcodeVars, _insturctions[currIndex])); getLabel != _oneOpcodeVars.end()){
 		auto index = std::distance(_forFuckingTranslate.begin(), findInVector(_forFuckingTranslate, _insturctions[currIndex]));//Find the real index of the while in the transaltion vector.
 		translateInisdeOfWhile(index - 1, getLabel->second + ":");//For not starting from loop and adding the : for the label itself
-		std::cout << "\n\t}\n";
+		std::cout << "\n\tecx++\n\t}\n";
 	}
 	
 }
@@ -755,9 +770,9 @@ The function is setting the function vars (to make them more beautufl.
 
 void Translate::setFunctionVars(const int& numOfFunctionVars)
 {
-	for (int i = numOfFunctionVars, j = PLUS_VAR_NUM; i > 0; i--, j += PLUS_VAR_NUM)
+	for (int i =  0, j = FIRST_VAR_NUM; i < numOfFunctionVars; i++, j += PLUS_VAR_NUM)
 	{
-		_functionVars["[rbp-" + std::to_string(j) + "]"] = "a" + std::to_string(i);//To make the it into the function var
+		_functionVars["[rbp+" + std::to_string(j) + "]"] = "a" + std::to_string(i + 1);//To make the it into the function var
 	}
 }
 
@@ -782,6 +797,60 @@ The function is  translating call.
 */
 
 void Translate::translateCall(const int& index)
-{
-
+{	
+	if (auto functionInformation = _improvedFunctionInformation.find(_forFuckingTranslate[index].second); functionInformation != _improvedFunctionInformation.end()){
+		std::cout << "\t" << _forFuckingTranslate[index].second << "("; 
+		printFunctionImpormationVarsItsTaken(functionInformation->second.second);
+		std::cout << ";\n";
+	}
+	
 }
+
+/*
+The function is printing the function information (vars that it taking)
+@input:  the found function vars-  const vector<varsVector>&
+@output: none 
+*/
+
+void  Translate::printFunctionImpormationVarsItsTaken(const std::vector<varsVector>& info)
+{
+	for (int i = 0; i < info.size(); ++i)
+	{
+		if (i != info.size() - 1) {	std::cout << info[i]._value << ", ";}
+		else { std::cout << info[i]._value << ")"; }
+	}
+}
+
+/*
+The function is prettify the locals var
+@input: the sizee  of locals vars and the currIndex - const int&  , const int&
+@output: none
+*/
+
+void Translate::prettyfiyLocalVars(const int& sizeOfLocals, const int& currIndex)
+{
+	for (int count = 0, i = currIndex, j = PLUS_VAR_NUM; count != sizeOfLocals; count++, j += PLUS_VAR_NUM, i--){
+		_functionVars["[rbp-" + std::to_string(j) + "]"] = _varsVector[i]._name;//Like the prettify of the old one
+	}
+}
+
+/*
+The function is printing all of the local vars.
+@input:   the size of locals var  and  the curr index - const int& and const int&
+@output:none.
+*/
+
+void Translate::printLocalVars(const int& sizeOfLocals, const int& currIndex)
+{
+	//For now this will do the  locals assgiments
+
+	for (int i = currIndex; i < sizeOfLocals; i++) { std::cout << "\t" << _varsVector[i]._type << " " << _varsVector[i]._name << " = " << _varsVector[i]._value << ";\n"; }
+}
+
+/*
+The function is translating the converting to  a c types
+@input:  source  and type - const parserPair& , const std::string&
+@ouput: the converted string (repestation in a c type) const std::string&
+*/
+
+std::string Translate::convertOpcode(const parserPair& src, const std::string& type){ return    "(" + type + ") " + src.second;}

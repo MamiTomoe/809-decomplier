@@ -8,7 +8,7 @@
 #include <range.hpp>
 #include <array>
 #include <regex>
-
+#include <boost/algorithm/string.hpp>
 
 #include "StackFrameException.hpp"
 
@@ -22,7 +22,8 @@
 #define STACK_POINTER_REGISTER "sp"
 #define DEFUALT_TYPE "int"
 #define OPCODE_THAT_DONT_APPEND_EQUAL "mov"
-#define IN_STACK_VAR "-"
+#define IN_STACK_VAR_LOCAL_VAR "-"
+#define IN_STACK_VAR_SENDING_VAR "+"
 #define MAX_SIZE_FOR_INT_VAR 1
 #define CMP_OPCODE "cmp"
 #define INC_OPCODE "inc"
@@ -34,6 +35,12 @@
 #define PLUS_VAR_NUM 4
 #define LOOP_INSTRCION "loop"
 #define TYPE_INDEX 0
+#define CALL_OPCODE "call"
+#define FIRST_VAR_NUM 8
+#define LOCAL_VAR_INDEX_IN_TRANSLATION_VECTOR 2
+#define CONVERTING_OPCODE "PTR"
+#define MAX_SIZE_FOR_LETTER 3
+#define CHAR_TYPE "char"
 
 /*Explaine here for the index, it gets the args that needed (Varaditic macro(In our case the args of the map)) and an index. and start
 from zero and goes up by the loop(we see in the macro for_indexed_m that there is a for and able to break. It will get the itertaor of the
@@ -122,7 +129,7 @@ private:
 	std::vector<parserPair> _oneOpcodeVars;
 
 	//Taking the name of the function, the type of it and the num of vars
-	std::map<std::string, std::pair<std::string, int>> _functionInformation;
+	//std::map<std::string, std::pair<std::string, int>> _functionInformation;
 
 	//TODO: If it works, delete the old one and stay with this (change the name of _function impormation)
 	std::map<std::string, std::pair<std::string,std::vector<varsVector>>> _improvedFunctionInformation;
@@ -134,7 +141,7 @@ private:
 	std::string _theARegister;
 
 	void translateSymobls(); 
-
+	
 
 	void parsePushAndPopAndCallWithVars();
 
@@ -250,8 +257,9 @@ private:
 	//@Output: True or false - bool
 
 	inline bool isFunctionVar(const std::string& opcode) {
-		auto isFunctionVar(opcode.find(IN_STACK_VAR));
-		return isFunctionVar != std::string::npos;
+		//auto isFunctionVar = opcode.find(IN_STACK_VAR_LOCAL_VAR);
+		//Check if the opcode not conatin - (as identfiy a var) or + (as identfiy of var)
+		return opcode.find(IN_STACK_VAR_LOCAL_VAR) != std::string::npos || opcode.find(IN_STACK_VAR_SENDING_VAR) != std::string::npos;
 	}
 
 
@@ -295,7 +303,9 @@ private:
 	//@output:  the result - end or found
 
 	inline std::map<std::string, std::string>::iterator typesMapResult(const std::string& givenString) {
-		return _types.find(givenString.substr(TYPE_INDEX, givenString.find(' ')));
+		std::string found = givenString.substr(TYPE_INDEX, givenString.find(' '));
+		boost::algorithm::to_lower(found);//Making the string into lower case
+		return _types.find(found);
 	}
 
 	//The function is checking if it connected to one of the instructions of stack frames vars (add or sub)
@@ -305,4 +315,22 @@ private:
 	inline bool isConnectedToOpcodeVars(const std::string& opcode) { return opcode == MAKES_LOCAL_VARS_OPCODE || opcode == CLEAN_STACK_FRAME; }
 
 	void translateCall(const int&);
+
+	void printFunctionImpormationVarsItsTaken(const std::vector<varsVector>&);
+
+	void prettyfiyLocalVars(const int& , const int&);
+
+	void printLocalVars(const int& , const int&);
+
+	std::string convertOpcode(const parserPair& src,   const std::string& type);
+
+	//The function is checking if it a char var
+	//@input: the something from the push -const std::string
+	//@output:  A char or not - bool
+
+
+	inline bool isCharVar(const std::string& suspices) { 
+	 auto expression = std::regex("'([A-Za-z])'");
+	 return std::regex_match(suspices, expression);  
+	}
 };

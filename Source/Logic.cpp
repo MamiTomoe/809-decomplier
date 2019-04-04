@@ -53,7 +53,7 @@ void Logic::parseAssemblyInfo()
 					pushIntoTranslationVector(_assemblyFromFile[i + pi::dstVarIndex] , i);
 
 					_sourceVars.push_back(parserPair(i, _assemblyFromFile[i + pi::srcVarIndex]));
-					pushIntoTranslationVector(_assemblyFromFile[i +  pi::dstVarIndex] , i);
+					pushIntoTranslationVector(_assemblyFromFile[i +  pi::srcVarIndex] , i);
 				}
 				i += found->second.second;//Getting to the next things in the file and not the vars of the opcode
 
