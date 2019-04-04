@@ -50,12 +50,12 @@ void Translate::translateSymobls()
 	{
 		if(isJmpOpcode(insturction.second))
 		{
-			translateElse(i);
+			translateElse((const int)i);
 		}
 
 		else if (auto isLoop(insturction.second.find(LOOP_INSTRCION)); isLoop != std::string::npos)//Find if contains the loop (while) instrcution
 		{
-			translateWhile(i);
+			translateWhile((const int)i);
 		}
 		
 		else if (auto find = _foundSymbols.find(insturction.second); isOpcodeIsASymbol(find)) {
@@ -70,7 +70,7 @@ void Translate::translateSymobls()
 			{
 				 if (CMP_OPCODE == insturction.second)
 				 {
-					translateCondition(insturction , i);
+					translateCondition(insturction , (const int)i);
 				 }
 				else if (findInSrcVar != _srcVars.end() && findInDstVar != _dstVars.end())
 				{
@@ -129,7 +129,7 @@ void Translate::translateFunction()
 			}
 			
 			std::cout << function.second.first << " " << function.first << "(" << varsName << ")";
-			setFunctionVars(function.second.second.size() );//The functtions num of vars
+			setFunctionVars((const int)function.second.second.size() );//The functtions num of vars
 		}
 		else { std::cout << function.second.first << " " << function.first << "()"; }
 
@@ -643,7 +643,7 @@ int Translate::findLabelOrFunctionIndex(const std::string& functionOrLabel)
 	 for_indexed_m(i, auto translate : _forFuckingTranslate)
 	 {
 		 if (std::string isLabelOrFunction = functionOrLabel + ":";  isLabelOrFunction == translate.second) {
-			 j = i;
+			 j = (int) i;
 			 break; 
 		 }
 
@@ -723,7 +723,7 @@ void Translate::translateWhile(const  int& currIndex)
 	if (auto getLabel(findInVector(_oneOpcodeVars, _insturctions[currIndex])); getLabel != _oneOpcodeVars.end()){
 		auto index = std::distance(_forFuckingTranslate.begin(), findInVector(_forFuckingTranslate, _insturctions[currIndex]));//Find the real index of the while in the transaltion vector.
 		translateInisdeOfWhile(index - 1, getLabel->second + ":");//For not starting from loop and adding the : for the label itself
-		std::cout << "\n\tecx++\n\t}\n";
+		std::cout << "\n\t\tecx++\n\t}\n";
 	}
 	
 }
@@ -798,9 +798,11 @@ The function is  translating call.
 
 void Translate::translateCall(const int& index)
 {	
-	if (auto functionInformation = _improvedFunctionInformation.find(_forFuckingTranslate[index].second); functionInformation != _improvedFunctionInformation.end()){
+	if (auto functionInformation = _improvedFunctionInformation.find(_forFuckingTranslate[index].second); functionInformation != _improvedFunctionInformation.end())
+	{
 		std::cout << "\t" << _forFuckingTranslate[index].second << "("; 
-		printFunctionImpormationVarsItsTaken(functionInformation->second.second);
+		if (!functionInformation->second.second.empty()) { printFunctionImpormationVarsItsTaken(functionInformation->second.second); }
+		else { std::cout << ")"; }
 		std::cout << ";\n";
 	}
 	
@@ -814,9 +816,9 @@ The function is printing the function information (vars that it taking)
 
 void  Translate::printFunctionImpormationVarsItsTaken(const std::vector<varsVector>& info)
 {
-	for (int i = 0; i < info.size(); ++i)
+	for (int i = (int)info.size() - 1 ; i >= 0  ; --i)//From the last var to the first one
 	{
-		if (i != info.size() - 1) {	std::cout << info[i]._value << ", ";}
+		if (i) {std::cout << info[i]._value << ", ";}//If it not is the last var
 		else { std::cout << info[i]._value << ")"; }
 	}
 }
